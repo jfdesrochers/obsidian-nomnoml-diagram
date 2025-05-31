@@ -6,6 +6,8 @@ import {
 } from 'obsidian';
 
 import * as nomnoml from 'nomnoml';
+import panzoom from '@panzoom/panzoom';
+import { cmLanguageNomnoml } from 'cmLanguage';
 
 interface NomnomlDiagramSettings {
 	// nomnoml's directive options are prefixed with # for convenience
@@ -38,7 +40,7 @@ const DEFAULT_SETTINGS: NomnomlDiagramSettings = {
 	'#gravity':    '',
 	'#edges':      'rounded',
 	'#background': '#ffffff',
-	'#fill':       '',
+	'#fill':       '#f8f8fa; #e5e6eb',
 	'#fillArrows': false,
 	'#font':       '',
 	'#fontSize':   '',
@@ -104,6 +106,29 @@ export default class NomnomlDiagram extends Plugin {
 						nomnoml.renderSvg(toRender, el.doc),
 					`</div>`,
 				].join('');
+				setTimeout(() => {
+					const diagramContainer = el.querySelector('.nomnoml-diagram-container');
+					const panzoomInstance = panzoom(diagramContainer as HTMLElement, {
+						minScale: 0.5,
+						maxScale: 10,
+						smoothScroll: true,
+						zoomDoubleClickSpeed: 500,
+						zoomOnDoubleClick: false, // Disable default zoom on double-click
+					});
+
+					diagramContainer.addEventListener('wheel', panzoomInstance.zoomWithWheel);
+					diagramContainer.addEventListener('dblclick', () => {
+						const svg = diagramContainer.querySelector('svg');
+						if (svg) {
+							const svgRect = svg.getBoundingClientRect();
+							const containerRect = diagramContainer.getBoundingClientRect();
+							const centerX = (svgRect.width - containerRect.width) / 2;
+							const centerY = (svgRect.height - containerRect.height) / 2;
+							panzoomInstance.pan(-centerX, -centerY);
+							panzoomInstance.zoom(1, { animate: true });
+						}
+					});
+				}, 0);
 			} catch (err) {
 				el.innerHTML = [
 					`<div class="nomnoml-diagram-container">Possible Syntax Error: `,
@@ -112,6 +137,14 @@ export default class NomnomlDiagram extends Plugin {
 				].join('');
 			}
 
+		});
+
+		window.CodeMirror.defineMode('nomnoml', cmLanguageNomnoml);
+
+		this.register(() => {
+			window.CodeMirror.defineMode('nomnoml', config =>
+				window.CodeMirror.getMode(config, "null")
+			);
 		});
 
 		this.addSettingTab(new NomnomlDiagramSettingTab(this.app, this));
@@ -257,7 +290,7 @@ class NomnomlDiagramSettingTab extends PluginSettingTab {
 			.setDesc('#fill directive')
 			.addText(text => (
 				text
-					.setPlaceholder('#eee8d5; #fdf6e3')
+					.setPlaceholder('#f8f8fa; #e5e6eb')
 					.setValue(this.plugin.settings['#fill'])
 					.onChange(async (value) => {
 						this.plugin.settings['#fill'] = value;
