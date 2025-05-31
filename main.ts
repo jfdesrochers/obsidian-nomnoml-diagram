@@ -101,7 +101,7 @@ export default class NomnomlDiagram extends Plugin {
 			try {
 				el.innerHTML = [
 					`<div class="nomnoml-diagram-container">`,
-						nomnoml.renderSvg(toRender),
+						nomnoml.renderSvg(toRender, el.doc),
 					`</div>`,
 				].join('');
 			} catch (err) {
